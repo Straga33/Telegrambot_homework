@@ -16,7 +16,7 @@ load_dotenv()
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
-        '%(asctime)s %(levelname)-8s %(message)s')
+    '%(asctime)s %(levelname)-8s %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -50,6 +50,7 @@ def check_tokens() -> bool:
     else:
         return True
 
+
 def get_api_answer(current_timestamp) -> dict:
     """Запрос к эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
@@ -59,6 +60,7 @@ def get_api_answer(current_timestamp) -> dict:
         message_error = f'статус кода: {response.status_code}'
         raise CheckStatusEndpoint(message_error)
     return response.json()
+
 
 def check_response(response) -> list:
     """Проверка ответ API на корректность."""
@@ -74,10 +76,11 @@ def check_response(response) -> list:
     else:
         return response.get('homeworks')
 
+
 def parse_status(homework) -> str:
     """информации о конкретной домашней работе, статус этой работы."""
     if 'homework_name' and 'status' not in homework:
-        message_error = f'отсутствуют искомые ключи'
+        message_error = 'отсутствуют искомые ключи'
         raise KeyError(message_error)
     else:
         homework_name = homework['homework_name']
@@ -86,17 +89,18 @@ def parse_status(homework) -> str:
         message_error = f'недокументированный статус: {homework_status}'
         raise CheckHomeworkStatus(message_error)
     elif homework_name not in status_all_homeworks:
-        status_all_homeworks[homework_name]=homework_status
+        status_all_homeworks[homework_name] = homework_status
         verdict = HOMEWORK_STATUSES[homework_status]
         return (f'Изменился статус проверки работы '
                 f'"{homework_name}". {verdict}')
     elif homework_status != status_all_homeworks[homework_name]:
-        status_all_homeworks[homework_name]=homework_status
+        status_all_homeworks[homework_name] = homework_status
         verdict = HOMEWORK_STATUSES[homework_status]
         return (f'Изменился статус проверки работы '
                 f'"{homework_name}". {verdict}')
     else:
         raise DebugHomeworkStatus(homework_name)
+
 
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
@@ -104,17 +108,19 @@ def send_message(bot, message):
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.info(f'Сообщение успешно отправлено в Telegram: {message}')
     except Exception as error:
-        logger.error('Сбой при отправке сообщения в Telegram')
+        logger.error(f'Сбой при отправке сообщения в Telegram: {error}')
+
 
 def chek_send_message_error(bot, message, send_message_error):
     """Проверка повторной отправки ошибки в Telegram."""
     if message in send_message_error:
-        if send_message_error[message] == False:
+        if send_message_error[message] != True:
             send_message(bot, message)
-            send_message_error[message]=True
+            send_message_error[message] = True
     elif message not in send_message_error:
         send_message(bot, message)
-        send_message_error[message]=True
+        send_message_error[message] = True
+
 
 def main():
     """Основная логика работы бота."""
@@ -148,7 +154,7 @@ def main():
             for numwork in range(0, len(homeworks_list)):
                 try:
                     verdict_status = parse_status(homeworks_list[numwork])
-                    send_message(bot, verdict_status)                    
+                    send_message(bot, verdict_status)
                 except DebugHomeworkStatus as error:
                     message = (f'Cтатус домашней "{error}" '
                                f'работы, не изменился')
