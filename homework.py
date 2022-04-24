@@ -57,7 +57,8 @@ def get_api_answer(current_timestamp) -> dict:
     params = {'from_date': timestamp}
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     if response.status_code != 200:
-        message_error = f'Недоступность эндпоига, статус кода: {response.status_code}'
+        message_error = (f'Недоступность эндпоига, '
+                         f'статус кода: {response.status_code}')
         raise CheckStatusEndpoint(message_error)
     return response.json()
 
@@ -80,13 +81,15 @@ def check_response(response) -> list:
 def parse_status(homework) -> str:
     """информации о конкретной домашней работе, статус этой работы."""
     if 'homework_name' and 'status' not in homework:
-        message_error = 'Ошибка проверка статуса домашней работы, отсутствуют искомые ключи'
+        message_error = ('Ошибка проверка статуса домашней работы, '
+                         'отсутствуют искомые ключи')
         raise KeyError(message_error)
     else:
         homework_name = homework['homework_name']
         homework_status = homework['status']
     if homework_status not in HOMEWORK_STATUSES:
-        message_error = f'Ошибка проверка статуса домашней работы, недокументированный статус: {homework_status}'
+        message_error = (f'Ошибка проверка статуса домашней работы, '
+                         f'недокументированный статус: {homework_status}')
         raise CheckHomeworkStatus(message_error)
     elif homework_name not in status_all_homeworks:
         status_all_homeworks[homework_name] = homework_status
@@ -129,7 +132,7 @@ def main():
         logger.critical(message)
         sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time() - 30 * 24 * 60 * 60)
+    current_timestamp = int(time.time())
     send_message_error = {}
     while True:
         try:
