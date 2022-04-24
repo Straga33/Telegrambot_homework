@@ -65,7 +65,7 @@ def get_api_answer(current_timestamp) -> dict:
 def check_response(response) -> list:
     """Проверка ответ API на корректность."""
     if type(response) != dict:
-        message_error = f'response не является словарем'
+        message_error = 'response не является словарем'
         raise TypeError(message_error)
     elif 'homeworks' not in response:
         message_error = 'в response отсутствует homeworks'
@@ -114,7 +114,7 @@ def send_message(bot, message):
 def chek_send_message_error(bot, message, send_message_error):
     """Проверка повторной отправки ошибки в Telegram."""
     if message in send_message_error:
-        if send_message_error[message] != True:
+        if send_message_error[message] is not True:
             send_message(bot, message)
             send_message_error[message] = True
     elif message not in send_message_error:
@@ -150,20 +150,19 @@ def main():
             time.sleep(RETRY_TIME)
             current_timestamp = int(time.time())
             continue
-        if homeworks_list is not None:
-            for numwork in range(0, len(homeworks_list)):
-                try:
-                    verdict_status = parse_status(homeworks_list[numwork])
-                    send_message(bot, verdict_status)
-                except DebugHomeworkStatus as error:
-                    message = (f'Cтатус домашней "{error}" '
-                               f'работы, не изменился')
-                    logger.debug(message)
-                except Exception as error:
-                    message = (f'Ошибка проверка статуса '
-                               f'домашней работы, {error}')
-                    logger.error(message)
-                    chek_send_message_error(bot, message)
+        for numwork in range(0, len(homeworks_list)):
+            try:
+                verdict_status = parse_status(homeworks_list[numwork])
+                send_message(bot, verdict_status)
+            except DebugHomeworkStatus as error:
+                message = (f'Cтатус домашней "{error}" '
+                           f'работы, не изменился')
+                logger.debug(message)
+            except Exception as error:
+                message = (f'Ошибка проверка статуса '
+                           f'домашней работы, {error}')
+                logger.error(message)
+                chek_send_message_error(bot, message)
         time.sleep(RETRY_TIME)
         current_timestamp = int(time.time())
         send_message_error = {}
