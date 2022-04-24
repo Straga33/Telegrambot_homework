@@ -9,7 +9,3 @@ class CheckHomeworksInResponse(Exception):
 class CheckHomeworkStatus(Exception):
     def __init__(self, text):
         self.txt = text
-
-class DebugHomeworkStatus(Exception):
-    def __init__(self, text):
-        self.txt = text

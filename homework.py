@@ -8,7 +8,7 @@ import telegram
 from dotenv import load_dotenv
 
 from exceptions import (CheckHomeworksInResponse, CheckHomeworkStatus,
-                        CheckStatusEndpoint, DebugHomeworkStatus)
+                        CheckStatusEndpoint)
 
 load_dotenv()
 
@@ -27,7 +27,7 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 
-RETRY_TIME = 600
+RETRY_TIME = 10  #600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -102,7 +102,9 @@ def parse_status(homework) -> str:
         return (f'Изменился статус проверки работы '
                 f'"{homework_name}". {verdict}')
     else:
-        raise DebugHomeworkStatus(homework_name)
+        message = (f'Cтатус домашней "{homework_name}" '
+                       f'работы, не изменился')
+        logger.debug(message)
 
 
 def send_message(bot, message):
@@ -140,26 +142,16 @@ def main():
             homeworks_list = check_response(response)
             for numwork in range(0, len(homeworks_list)):
                 verdict_status = parse_status(homeworks_list[numwork])
-                send_message(bot, verdict_status)
-        except DebugHomeworkStatus as error:
-            message = (f'Cтатус домашней "{error}" '
-                       f'работы, не изменился')
-            logger.debug(message)
-            chek_send_message_error(bot, message, send_message_error)
-            time.sleep(RETRY_TIME)
-            current_timestamp = int(time.time())
-            continue
+                if verdict_status is not None:
+                    send_message(bot, verdict_status)
+                    send_message_error = {}
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
-            chek_send_message_error(bot, message, send_message_error)
-            time.sleep(RETRY_TIME)
-            current_timestamp = int(time.time())
-            continue
+            chek_send_message_error(bot, message, send_message_error)           
         finally:
             time.sleep(RETRY_TIME)
             current_timestamp = int(time.time())
-            send_message_error = {}
 
 
 if __name__ == '__main__':
