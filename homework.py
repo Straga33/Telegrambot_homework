@@ -150,19 +150,19 @@ def main():
             time.sleep(RETRY_TIME)
             current_timestamp = int(time.time())
             continue
-        for numwork in range(0, len(homeworks_list)):
-            try:
-                verdict_status = parse_status(homeworks_list[numwork])
-                send_message(bot, verdict_status)
-            except DebugHomeworkStatus as error:
-                message = (f'Cтатус домашней "{error}" '
-                           f'работы, не изменился')
-                logger.debug(message)
-            except Exception as error:
-                message = (f'Ошибка проверка статуса '
-                           f'домашней работы, {error}')
-                logger.error(message)
-                chek_send_message_error(bot, message)
+        # for numwork in range(0, len(homeworks_list)):
+        try:
+            verdict_status = parse_status(homeworks_list[numwork])
+            send_message(bot, verdict_status)
+        except DebugHomeworkStatus as error:
+            message = (f'Cтатус домашней "{error}" '
+                       f'работы, не изменился')
+            logger.debug(message)
+        except Exception as error:
+            message = (f'Ошибка проверка статуса '
+                       f'домашней работы, {error}')
+            logger.error(message)
+            chek_send_message_error(bot, message)
         time.sleep(RETRY_TIME)
         current_timestamp = int(time.time())
         send_message_error = {}
