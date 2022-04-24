@@ -152,11 +152,11 @@ def main():
             continue
         # for numwork in range(0, len(homeworks_list)):
         try:
-            verdict_status = parse_status(homeworks_list[numwork])
+            verdict_status = parse_status(homeworks_list[0])
             send_message(bot, verdict_status)
         except DebugHomeworkStatus as error:
             message = (f'Cтатус домашней "{error}" '
-                       f'работы, не изменился')
+                         f'работы, не изменился')
             logger.debug(message)
         except Exception as error:
             message = (f'Ошибка проверка статуса '
