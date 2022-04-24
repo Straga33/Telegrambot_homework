@@ -57,7 +57,7 @@ def get_api_answer(current_timestamp) -> dict:
     params = {'from_date': timestamp}
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     if response.status_code != 200:
-        message_error = f'статус кода: {response.status_code}'
+        message_error = f'Недоступность эндпоига, статус кода: {response.status_code}'
         raise CheckStatusEndpoint(message_error)
     return response.json()
 
@@ -65,13 +65,13 @@ def get_api_answer(current_timestamp) -> dict:
 def check_response(response) -> list:
     """Проверка ответ API на корректность."""
     if type(response) != dict:
-        message_error = 'response не является словарем'
+        message_error = 'API не корректен, response не является словарем'
         raise TypeError(message_error)
     elif 'homeworks' not in response:
-        message_error = 'в response отсутствует homeworks'
+        message_error = 'API не корректен, в response отсутствует homeworks'
         raise CheckHomeworksInResponse(message_error)
     elif type(response.get('homeworks')) != list:
-        message_error = 'response вернул не список'
+        message_error = 'API не корректен, response вернул не список'
         raise CheckHomeworksInResponse(message_error)
     else:
         return response.get('homeworks')
@@ -80,13 +80,13 @@ def check_response(response) -> list:
 def parse_status(homework) -> str:
     """информации о конкретной домашней работе, статус этой работы."""
     if 'homework_name' and 'status' not in homework:
-        message_error = 'отсутствуют искомые ключи'
+        message_error = 'Ошибка проверка статуса домашней работы, отсутствуют искомые ключи'
         raise KeyError(message_error)
     else:
         homework_name = homework['homework_name']
         homework_status = homework['status']
     if homework_status not in HOMEWORK_STATUSES:
-        message_error = f'недокументированный статус: {homework_status}'
+        message_error = f'Ошибка проверка статуса домашней работы, недокументированный статус: {homework_status}'
         raise CheckHomeworkStatus(message_error)
     elif homework_name not in status_all_homeworks:
         status_all_homeworks[homework_name] = homework_status
@@ -129,44 +129,34 @@ def main():
         logger.critical(message)
         sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
+    current_timestamp = int(time.time() - 30 * 24 * 60 * 60)
     send_message_error = {}
     while True:
         try:
             response = get_api_answer(current_timestamp)
-        except Exception as error:
-            message = f'Недоступность эндпоига, {error}'
-            logger.error(message)
-            chek_send_message_error(bot, message, send_message_error)
-            time.sleep(RETRY_TIME)
-            current_timestamp = int(time.time())
-            continue
-        try:
             homeworks_list = check_response(response)
-        except Exception as error:
-            message = f'API не корректен, {error}'
-            logger.error(message)
-            chek_send_message_error(bot, message)
-            time.sleep(RETRY_TIME)
-            current_timestamp = int(time.time())
-            continue
-        # for numwork in range(0, len(homeworks_list)):
-        try:
             for numwork in range(0, len(homeworks_list)):
                 verdict_status = parse_status(homeworks_list[numwork])
                 send_message(bot, verdict_status)
         except DebugHomeworkStatus as error:
             message = (f'Cтатус домашней "{error}" '
-                         f'работы, не изменился')
+                       f'работы, не изменился')
             logger.debug(message)
+            chek_send_message_error(bot, message, send_message_error)
+            time.sleep(RETRY_TIME)
+            current_timestamp = int(time.time())
+            continue
         except Exception as error:
-            message = (f'Ошибка проверка статуса '
-                       f'домашней работы, {error}')
+            message = f'Сбой в работе программы: {error}'
             logger.error(message)
-            chek_send_message_error(bot, message)
-        time.sleep(RETRY_TIME)
-        current_timestamp = int(time.time())
-        send_message_error = {}
+            chek_send_message_error(bot, message, send_message_error)
+            time.sleep(RETRY_TIME)
+            current_timestamp = int(time.time())
+            continue
+        finally:
+            time.sleep(RETRY_TIME)
+            current_timestamp = int(time.time())
+            send_message_error = {}
 
 
 if __name__ == '__main__':
