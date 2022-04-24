@@ -38,8 +38,7 @@ HOMEWORK_STATUSES = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-status_all_homeworks = {} #словарь для запоминания статусов дом.работ
-send_message_error = {} #словарь отправленных ошибок в Telegram
+status_all_homeworks = {}
 
 
 def check_tokens() -> bool:
@@ -107,7 +106,7 @@ def send_message(bot, message):
     except Exception as error:
         logger.error('Сбой при отправке сообщения в Telegram')
 
-def chek_send_message_error(bot, message):
+def chek_send_message_error(bot, message, send_message_error):
     """Проверка повторной отправки ошибки в Telegram."""
     if message in send_message_error:
         if send_message_error[message] == False:
@@ -125,14 +124,14 @@ def main():
         sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
-    
+    send_message_error = {}
     while True:
         try:
             response = get_api_answer(current_timestamp)
         except Exception as error:
             message = f'Недоступность эндпоига, {error}'
             logger.error(message)
-            chek_send_message_error(bot, message)
+            chek_send_message_error(bot, message, send_message_error)
             time.sleep(RETRY_TIME)
             current_timestamp = int(time.time())
             continue
@@ -149,8 +148,7 @@ def main():
             for numwork in range(0, len(homeworks_list)):
                 try:
                     verdict_status = parse_status(homeworks_list[numwork])
-                    send_message(bot, verdict_status)
-                    send_message_error = {}
+                    send_message(bot, verdict_status)                    
                 except DebugHomeworkStatus as error:
                     message = (f'Cтатус домашней "{error}" '
                                f'работы, не изменился')
@@ -162,6 +160,7 @@ def main():
                     chek_send_message_error(bot, message)
         time.sleep(RETRY_TIME)
         current_timestamp = int(time.time())
+        send_message_error = {}
 
 
 if __name__ == '__main__':
