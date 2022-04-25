@@ -1,7 +1,9 @@
+import logging
 import os
 import sys
 import time
-import logging
+from http import HTTPStatus
+from typing import Dict, List, Union
 
 import requests
 import telegram
@@ -11,15 +13,6 @@ from exceptions import (CheckHomeworksInResponse, CheckHomeworkStatus,
                         CheckStatusEndpoint)
 
 load_dotenv()
-
-
-logger = logging.getLogger()
-handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    '%(asctime)s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
 
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
@@ -41,73 +34,89 @@ HOMEWORK_STATUSES = {
 status_all_homeworks = {}
 
 
+def init_logger() -> logging.Logger:
+    logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
+
+logger = init_logger()
+
+
 def check_tokens() -> bool:
     """Проверка доступности переменных окружения."""
-    if (PRACTICUM_TOKEN is None
-            or TELEGRAM_CHAT_ID is None
-            or TELEGRAM_TOKEN is None):
-        return False
-    else:
-        return True
+    return all([
+            PRACTICUM_TOKEN is not None,
+            TELEGRAM_TOKEN is not None,
+            TELEGRAM_CHAT_ID is not None
+         ])
 
 
-def get_api_answer(current_timestamp) -> dict:
+def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
     """Запрос к эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-    if response.status_code != 200:
+    try:
+        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    except Exception as error:
+        raise CheckStatusEndpoint(f'requests.get вернул ошибку "{error}"')
+    if response.status_code != HTTPStatus.OK:
         message_error = (f'Недоступность эндпоига, '
                          f'статус кода: {response.status_code}')
         raise CheckStatusEndpoint(message_error)
-    return response.json()
+    try:
+        check_response = response.json()
+    except Exception:
+        raise CheckStatusEndpoint('Cервер вернул тело не в json формате')
+    return check_response
 
 
-def check_response(response) -> list:
+def check_response(response: Dict[str, Union[str, int]]) -> List[dict]:
     """Проверка ответ API на корректность."""
-    if type(response) != dict:
+    if not isinstance(response, dict):
         message_error = 'API не корректен, response не является словарем'
         raise TypeError(message_error)
-    elif 'homeworks' not in response:
+    if 'homeworks' not in response:
         message_error = 'API не корректен, в response отсутствует homeworks'
         raise CheckHomeworksInResponse(message_error)
-    elif type(response.get('homeworks')) != list:
+    if  not isinstance(response.get('homeworks'), list):
         message_error = 'API не корректен, response вернул не список'
         raise CheckHomeworksInResponse(message_error)
-    else:
-        return response.get('homeworks')
+    return response.get('homeworks')
 
 
-def parse_status(homework) -> str:
+def parse_status(homework: Dict[str, Union[str, int]]) -> str:
     """информации о конкретной домашней работе, статус этой работы."""
-    if 'homework_name' and 'status' not in homework:
+    if 'homework_name' not in homework or 'status' not in homework:
         message_error = ('Ошибка проверка статуса домашней работы, '
                          'отсутствуют искомые ключи')
         raise KeyError(message_error)
-    else:
-        homework_name = homework['homework_name']
-        homework_status = homework['status']
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
     if homework_status not in HOMEWORK_STATUSES:
         message_error = (f'Ошибка проверка статуса домашней работы, '
                          f'недокументированный статус: {homework_status}')
         raise CheckHomeworkStatus(message_error)
-    elif homework_name not in status_all_homeworks:
+    if homework_name not in status_all_homeworks:
         status_all_homeworks[homework_name] = homework_status
         verdict = HOMEWORK_STATUSES[homework_status]
         return (f'Изменился статус проверки работы '
                 f'"{homework_name}". {verdict}')
-    elif homework_status != status_all_homeworks[homework_name]:
+    if homework_status != status_all_homeworks[homework_name]:
         status_all_homeworks[homework_name] = homework_status
         verdict = HOMEWORK_STATUSES[homework_status]
         return (f'Изменился статус проверки работы '
                 f'"{homework_name}". {verdict}')
-    else:
-        message = (f'Cтатус домашней "{homework_name}" '
-                   f'работы, не изменился')
-        logger.debug(message)
+    message = (f'Cтатус домашней "{homework_name}" '
+               f'работы, не изменился')
+    logger.debug(message)
 
 
-def send_message(bot, message):
+def send_message(bot: telegram.Bot, message: str) -> None:
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
@@ -116,18 +125,22 @@ def send_message(bot, message):
         logger.error(f'Сбой при отправке сообщения в Telegram: {error}')
 
 
-def chek_send_message_error(bot, message, send_message_error):
+def chek_send_message_error(
+        bot: telegram.Bot,
+        message: str,
+        send_message_error: Dict[str, bool]
+    ) -> None:
     """Проверка повторной отправки ошибки в Telegram."""
     if message in send_message_error:
         if send_message_error[message] is not True:
             send_message(bot, message)
             send_message_error[message] = True
-    elif message not in send_message_error:
+    else:
         send_message(bot, message)
         send_message_error[message] = True
 
 
-def main():
+def main() -> None:
     """Основная логика работы бота."""
     if not check_tokens():
         message = 'Отсутствуют необходимые переменные окружения'
@@ -138,7 +151,7 @@ def main():
     send_message_error = {}
     while True:
         try:
-            response = get_api_answer(current_timestamp)
+            response = get_api_answer(current_timestamp)           
             homeworks_list = check_response(response)
             for numwork in range(0, len(homeworks_list)):
                 verdict_status = parse_status(homeworks_list[numwork])
