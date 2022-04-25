@@ -35,6 +35,7 @@ status_all_homeworks = {}
 
 
 def init_logger() -> logging.Logger:
+    """Настройки и инициализация логгера."""
     logger = logging.getLogger()
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
@@ -44,16 +45,17 @@ def init_logger() -> logging.Logger:
     logger.setLevel(logging.INFO)
     return logger
 
+
 logger = init_logger()
 
 
 def check_tokens() -> bool:
     """Проверка доступности переменных окружения."""
     return all([
-            PRACTICUM_TOKEN is not None,
-            TELEGRAM_TOKEN is not None,
-            TELEGRAM_CHAT_ID is not None
-         ])
+        PRACTICUM_TOKEN is not None,
+        TELEGRAM_TOKEN is not None,
+        TELEGRAM_CHAT_ID is not None
+    ])
 
 
 def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
@@ -83,7 +85,7 @@ def check_response(response: Dict[str, Union[str, int]]) -> List[dict]:
     if 'homeworks' not in response:
         message_error = 'API не корректен, в response отсутствует homeworks'
         raise CheckHomeworksInResponse(message_error)
-    if  not isinstance(response.get('homeworks'), list):
+    if not isinstance(response.get('homeworks'), list):
         message_error = 'API не корректен, response вернул не список'
         raise CheckHomeworksInResponse(message_error)
     return response.get('homeworks')
@@ -125,11 +127,8 @@ def send_message(bot: telegram.Bot, message: str) -> None:
         logger.error(f'Сбой при отправке сообщения в Telegram: {error}')
 
 
-def chek_send_message_error(
-        bot: telegram.Bot,
-        message: str,
-        send_message_error: Dict[str, bool]
-    ) -> None:
+def chek_send_message_error(bot: telegram.Bot, message: str,
+                            send_message_error: Dict[str, bool]) -> None:
     """Проверка повторной отправки ошибки в Telegram."""
     if message in send_message_error:
         if send_message_error[message] is not True:
@@ -151,7 +150,7 @@ def main() -> None:
     send_message_error = {}
     while True:
         try:
-            response = get_api_answer(current_timestamp)           
+            response = get_api_answer(current_timestamp)
             homeworks_list = check_response(response)
             for numwork in range(0, len(homeworks_list)):
                 verdict_status = parse_status(homeworks_list[numwork])
