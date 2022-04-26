@@ -35,6 +35,7 @@ status_all_homeworks = {}
 
 
 def init_logger() -> logging.Logger:
+    """Настройки и инициализация логгера."""
     logger = logging.getLogger()
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
@@ -44,16 +45,17 @@ def init_logger() -> logging.Logger:
     logger.setLevel(logging.INFO)
     return logger
 
+
 logger = init_logger()
 
 
 def check_tokens() -> bool:
     """Проверка доступности переменных окружения."""
     return all([
-            PRACTICUM_TOKEN,
-            TELEGRAM_TOKEN,
-            TELEGRAM_CHAT_ID
-         ])
+        PRACTICUM_TOKEN,
+        TELEGRAM_TOKEN,
+        TELEGRAM_CHAT_ID
+    ])
 
 
 def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
@@ -76,8 +78,8 @@ def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
 
 
 def check_response(
-        response: Dict[str, Union[str, int]]
-    ) -> List[Dict[str, Union[str, int]]]:
+            response: Dict[str, Union[str, int]]
+        ) -> List[Dict[str, Union[str, int]]]:
     """Проверка ответ API на корректность."""
     if not isinstance(response, dict):
         message_error = 'API не корректен, response не является словарем'
@@ -85,7 +87,7 @@ def check_response(
     if 'homeworks' not in response:
         message_error = 'API не корректен, в response отсутствует homeworks'
         raise CheckHomeworksInResponse(message_error)
-    if  not isinstance(response.get('homeworks'), list):
+    if not isinstance(response.get('homeworks'), list):
         message_error = 'API не корректен, response вернул не список'
         raise CheckHomeworksInResponse(message_error)
     return response.get('homeworks')
