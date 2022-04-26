@@ -78,8 +78,8 @@ def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
 
 
 def check_response(
-        response: Dict[str, Union[str, int]]
-    ) -> List[Dict[str, Union[str, int]]]:
+    response: Dict[str, Union[str, int]]
+) -> List[Dict[str, Union[str, int]]]:
     """Проверка ответ API на корректность."""
     if not isinstance(response, dict):
         message_error = 'API не корректен, response не является словарем'
