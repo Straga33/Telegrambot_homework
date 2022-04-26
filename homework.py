@@ -35,7 +35,6 @@ status_all_homeworks = {}
 
 
 def init_logger() -> logging.Logger:
-    """Настройки и инициализация логгера."""
     logger = logging.getLogger()
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
@@ -45,17 +44,16 @@ def init_logger() -> logging.Logger:
     logger.setLevel(logging.INFO)
     return logger
 
-
 logger = init_logger()
 
 
 def check_tokens() -> bool:
     """Проверка доступности переменных окружения."""
     return all([
-        PRACTICUM_TOKEN is not None,
-        TELEGRAM_TOKEN is not None,
-        TELEGRAM_CHAT_ID is not None
-    ])
+            PRACTICUM_TOKEN,
+            TELEGRAM_TOKEN,
+            TELEGRAM_CHAT_ID
+         ])
 
 
 def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
@@ -72,12 +70,14 @@ def get_api_answer(current_timestamp: int) -> Dict[str, Union[list, int]]:
         raise CheckStatusEndpoint(message_error)
     try:
         check_response = response.json()
-    except Exception:
+    except AttributeError:
         raise CheckStatusEndpoint('Cервер вернул тело не в json формате')
     return check_response
 
 
-def check_response(response: Dict[str, Union[str, int]]) -> List[dict]:
+def check_response(
+        response: Dict[str, Union[str, int]]
+    ) -> List[Dict[str, Union[str, int]]]:
     """Проверка ответ API на корректность."""
     if not isinstance(response, dict):
         message_error = 'API не корректен, response не является словарем'
@@ -85,7 +85,7 @@ def check_response(response: Dict[str, Union[str, int]]) -> List[dict]:
     if 'homeworks' not in response:
         message_error = 'API не корректен, в response отсутствует homeworks'
         raise CheckHomeworksInResponse(message_error)
-    if not isinstance(response.get('homeworks'), list):
+    if  not isinstance(response.get('homeworks'), list):
         message_error = 'API не корректен, response вернул не список'
         raise CheckHomeworksInResponse(message_error)
     return response.get('homeworks')
@@ -127,8 +127,11 @@ def send_message(bot: telegram.Bot, message: str) -> None:
         logger.error(f'Сбой при отправке сообщения в Telegram: {error}')
 
 
-def chek_send_message_error(bot: telegram.Bot, message: str,
-                            send_message_error: Dict[str, bool]) -> None:
+def chek_send_message_error(
+        bot: telegram.Bot,
+        message: str,
+        send_message_error: Dict[str, bool]
+    ) -> None:
     """Проверка повторной отправки ошибки в Telegram."""
     if message in send_message_error:
         if send_message_error[message] is not True:
