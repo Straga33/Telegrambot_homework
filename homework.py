@@ -93,9 +93,13 @@ def check_response(
 
 def parse_status(homework: Dict[str, Union[str, int]]) -> str:
     """информации о конкретной домашней работе, статус этой работы."""
-    if 'homework_name' not in homework or 'status' not in homework:
+    if 'homework_name' not in homework:
         message_error = ('Ошибка проверка статуса домашней работы, '
-                         'отсутствуют искомые ключи')
+                         'отсутствует искомый ключ "homework_name"')
+        raise KeyError(message_error)
+    if 'status' not in homework:
+        message_error = ('Ошибка проверка статуса домашней работы, '
+                         'отсутствует искомый ключ "status"')
         raise KeyError(message_error)
     homework_name = homework['homework_name']
     homework_status = homework['status']
@@ -127,21 +131,6 @@ def send_message(bot: telegram.Bot, message: str) -> None:
         logger.error(f'Сбой при отправке сообщения в Telegram: {error}')
 
 
-def chek_send_message_error(
-        bot: telegram.Bot,
-        message: str,
-        send_message_error: Dict[str, bool]
-    ) -> None:
-    """Проверка повторной отправки ошибки в Telegram."""
-    if message in send_message_error:
-        if send_message_error[message] is not True:
-            send_message(bot, message)
-            send_message_error[message] = True
-    else:
-        send_message(bot, message)
-        send_message_error[message] = True
-
-
 def main() -> None:
     """Основная логика работы бота."""
     if not check_tokens():
@@ -150,20 +139,21 @@ def main() -> None:
         sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
-    send_message_error = {}
+    chek_send_message_error = False
     while True:
         try:
             response = get_api_answer(current_timestamp)
             homeworks_list = check_response(response)
-            for numwork in range(0, len(homeworks_list)):
-                verdict_status = parse_status(homeworks_list[numwork])
+            for homework_dict in homeworks_list:
+                verdict_status = parse_status(homework_dict)
                 if verdict_status is not None:
                     send_message(bot, verdict_status)
-                    send_message_error = {}
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
-            chek_send_message_error(bot, message, send_message_error)
+            if not chek_send_message_error:
+                send_message(bot, message)
+                chek_send_message_error = True
         finally:
             time.sleep(RETRY_TIME)
             current_timestamp = int(time.time())
