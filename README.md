@@ -55,7 +55,6 @@ python manage.py migrate
 ```
 python manage.py runserver
 ```
-
 ### Разработчик:
 
 Басков Михаил (baem-festa@yandex.ru)
